@@ -16,12 +16,16 @@ struct ContentView: View {
     @State private var errorMessage = ""
     @State private var showingError = false
     
+    @State private var score = 0
+    
     var body: some View {
         NavigationView {
             List {
                 Section {
                     TextField("Enter your word", text: $newWord)
                         .autocapitalization(.none)
+                    Text("Score: \(score)")
+                        .font(.headline)
                 }
                 
                 Section {
@@ -33,13 +37,17 @@ struct ContentView: View {
                     }
                 }
             }
-            .navigationTitle(rootWord)
+            .navigationTitle("\(rootWord)")
+            
             .onSubmit(addNewWord)
             .onAppear(perform: startGame)
             .alert(errorTitle, isPresented: $showingError) {
                 Button("OK", role: .cancel) {}
             } message: {
                 Text(errorMessage)
+            }
+            .toolbar {
+                Button("New Word", action: startGame)
             }
         }
     }
@@ -63,11 +71,22 @@ struct ContentView: View {
             return
         }
         
+        guard isLongEnough(word: answer) else {
+            wordError(title: "Word too short", message: "Enter words at least 3 characters in length!")
+            return
+        }
+        
+        guard isNotRootWord(word: answer) else {
+            wordError(title: "Word same as given", message: "You need to make new words from the given word!")
+            return
+        }
+        
         withAnimation {
             usedWords.insert(answer, at: 0)
         }
         
         newWord = ""
+        addScore(word: answer)
     }
     
     func startGame() {
@@ -75,6 +94,11 @@ struct ContentView: View {
             if let startWords = try? String(contentsOf: startWordsURL) {
                 let allWords = startWords.components(separatedBy: "\n")
                 rootWord = allWords.randomElement() ?? "silkworm"
+                
+                score = 0
+                usedWords.removeAll()
+                newWord = ""
+                
                 return
             }
         }
@@ -108,10 +132,34 @@ struct ContentView: View {
         return mispelledRange.location == NSNotFound
     }
     
+    func isLongEnough(word: String) -> Bool {
+        if word.count < 3 {
+            return false
+        }
+        
+        return true
+    }
+    
+    func isNotRootWord(word: String) -> Bool {
+        if word == rootWord {
+            return false
+        }
+        
+        return true
+    }
+    
     func wordError(title: String, message: String) {
         errorTitle = title
         errorMessage = message
         showingError = true
+    }
+    
+    func addScore(word: String) {
+        if word.count == 8 {
+            score += 100
+        } else {
+            score += word.count
+        }
     }
 }
 
